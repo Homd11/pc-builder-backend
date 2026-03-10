@@ -72,3 +72,7 @@ const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
     logger.info(`🚀 Backend is running on http://localhost:${PORT} [${process.env.NODE_ENV || 'development'}]`);
 });
+
+// Export for Vercel serverless deployment
+module.exports = app;
+
