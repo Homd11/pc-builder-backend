@@ -16,11 +16,16 @@ const app = express();
 // --- Security Middleware ---
 app.use(helmet()); // Secure HTTP headers
 
-// CORS — restrict to allowed origin
+// CORS — allow frontend to talk to the API
 app.use(cors({
     origin: process.env.CORS_ORIGIN || '*',
-    methods: ['GET', 'POST', 'DELETE'],
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept'],
+    credentials: true,
 }));
+
+// Handle preflight requests explicitly
+app.options('*', cors());
 
 // Body parser
 app.use(express.json({ limit: '10kb' })); // Limit payload size
