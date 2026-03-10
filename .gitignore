@@ -1,0 +1,32 @@
+# Dependencies
+node_modules/
+
+# Environment variables (contains secrets)
+.env
+.env.local
+.env.production
+
+# Logs
+logs/*
+!logs/.gitkeep
+*.log
+
+# Debug/output files
+create-result.txt
+check-result.txt
+seed-result.txt
+verify-result.txt
+verify-modules.js
+
+# Data files (all data lives in Supabase)
+data/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
