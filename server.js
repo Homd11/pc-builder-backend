@@ -43,11 +43,15 @@ app.use('/api/', apiLimiter);
 
 // Health check endpoint (no DB required)
 app.get('/api/health', (req, res) => {
+    const mongoUri = process.env.MONGODB_URI || '';
     res.json({
         success: true,
         status: 'OK',
         uptime: process.uptime(),
-        mongoConfigured: !!process.env.MONGODB_URI,
+        mongoConfigured: !!mongoUri,
+        mongoHost: mongoUri ? mongoUri.replace(/\/\/([^:]+):([^@]+)@/, '//$1:***@').split('?')[0] : 'not set',
+        mongooseState: require('mongoose').connection.readyState,
+        nodeEnv: process.env.NODE_ENV || 'not set',
     });
 });
 
@@ -61,7 +65,7 @@ app.use('/api/', async (req, res, next) => {
         return res.status(503).json({
             success: false,
             error: 'Database temporarily unavailable',
-            detail: process.env.NODE_ENV !== 'production' ? err.message : undefined,
+            detail: err.message,
         });
     }
 });

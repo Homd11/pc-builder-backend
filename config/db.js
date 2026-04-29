@@ -1,48 +1,39 @@
 const mongoose = require('mongoose');
 const logger = require('../utils/logger');
 
-// Fix DNS resolution for MongoDB SRV on some local networks
-// Vercel's own DNS works fine, so only override locally
-if (process.env.NODE_ENV !== 'production') {
-    try {
-        const dns = require('dns');
-        dns.setServers(['8.8.8.8', '8.8.4.4']);
-    } catch (e) {
-        // Ignore if dns module not available
-    }
-}
-
-let cached = global._mongooseConnection;
+// Cache the connection promise for serverless reuse
+let cachedPromise = null;
 
 const connectDB = async () => {
-    // Re-use cached connection in serverless environments (Vercel)
-    if (cached && cached.readyState === 1) {
-        return cached;
+    // If already connected, return immediately
+    if (mongoose.connection.readyState === 1) {
+        return mongoose.connection;
     }
 
-    try {
-        const mongoUri = process.env.MONGODB_URI;
+    // If a connection attempt is in progress, wait for it
+    if (cachedPromise) {
+        return cachedPromise;
+    }
 
-        if (!mongoUri) {
-            logger.warn('⚠ MONGODB_URI not configured — database features will not work');
-            return null;
-        }
+    const mongoUri = process.env.MONGODB_URI;
 
-        const conn = await mongoose.connect(mongoUri, {
-            bufferCommands: false,
-            serverSelectionTimeoutMS: 10000,
-            socketTimeoutMS: 45000,
-        });
+    if (!mongoUri) {
+        logger.warn('⚠ MONGODB_URI not configured — database features will not work');
+        throw new Error('MONGODB_URI not configured');
+    }
 
-        cached = conn.connection;
-        global._mongooseConnection = cached;
-
+    cachedPromise = mongoose.connect(mongoUri, {
+        serverSelectionTimeoutMS: 15000,
+        socketTimeoutMS: 45000,
+    }).then(conn => {
         logger.info(`✅ MongoDB connected: ${conn.connection.host}`);
-        return conn;
-    } catch (err) {
-        logger.error(`MongoDB connection error: ${err.message}`);
+        return conn.connection;
+    }).catch(err => {
+        cachedPromise = null; // Allow retry on next request
         throw err;
-    }
+    });
+
+    return cachedPromise;
 };
 
 module.exports = connectDB;
