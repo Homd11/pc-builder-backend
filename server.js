@@ -41,6 +41,16 @@ const apiLimiter = rateLimit({
 });
 app.use('/api/', apiLimiter);
 
+// Health check endpoint (no DB required)
+app.get('/api/health', (req, res) => {
+    res.json({
+        success: true,
+        status: 'OK',
+        uptime: process.uptime(),
+        mongoConfigured: !!process.env.MONGODB_URI,
+    });
+});
+
 // --- Ensure MongoDB is connected before handling API requests ---
 app.use('/api/', async (req, res, next) => {
     try {
@@ -48,7 +58,11 @@ app.use('/api/', async (req, res, next) => {
         next();
     } catch (err) {
         logger.error('Database connection failed', { error: err.message });
-        return res.status(503).json({ success: false, error: 'Database temporarily unavailable' });
+        return res.status(503).json({
+            success: false,
+            error: 'Database temporarily unavailable',
+            detail: process.env.NODE_ENV !== 'production' ? err.message : undefined,
+        });
     }
 });
 
@@ -75,11 +89,6 @@ app.use('/api/auth', authRoute);
 // Components & Builds CRUD
 app.use('/api/components', componentsRoute);
 app.use('/api/builds', buildsRoute);
-
-// Health check endpoint
-app.get('/api/health', (req, res) => {
-    res.json({ success: true, status: 'OK', uptime: process.uptime() });
-});
 
 // --- Global Error Handler ---
 app.use(errorHandler);
