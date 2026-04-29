@@ -7,6 +7,9 @@
  * Requires MONGODB_URI in .env
  */
 require('dotenv').config();
+// Use Google DNS to resolve MongoDB SRV records (fixes issues on some networks)
+const dns = require('dns');
+dns.setServers(['8.8.8.8', '8.8.4.4']);
 const fs = require('fs');
 const path = require('path');
 const mongoose = require('mongoose');
