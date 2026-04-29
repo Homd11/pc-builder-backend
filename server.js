@@ -14,9 +14,6 @@ const authRoute = require('./routes/auth');
 
 const app = express();
 
-// --- Connect to MongoDB ---
-connectDB();
-
 // --- Security Middleware ---
 app.use(helmet()); // Secure HTTP headers
 
@@ -43,6 +40,17 @@ const apiLimiter = rateLimit({
     message: { success: false, error: 'Too many requests. Please try again later.' },
 });
 app.use('/api/', apiLimiter);
+
+// --- Ensure MongoDB is connected before handling API requests ---
+app.use('/api/', async (req, res, next) => {
+    try {
+        await connectDB();
+        next();
+    } catch (err) {
+        logger.error('Database connection failed', { error: err.message });
+        return res.status(503).json({ success: false, error: 'Database temporarily unavailable' });
+    }
+});
 
 // --- Request Logging ---
 app.use((req, res, next) => {
